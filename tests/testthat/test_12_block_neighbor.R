@@ -7,7 +7,9 @@ context("Check nearest neighbors")
 #  For target time t^*, we are trying to predict the X(t^* + 1) value.
 #  By definition, X(t^* + 1) is included in x(t^* + 2) = (X(t^* + 2), X(t^* +
 #  1)), and so we should not be allowed to use x(t^* + 2). This test will test
-#  if x(t^* + 2) is correctly not allowed.
+#  if x(t^* + 2) is correctly not allowed. For this time series, my (Andrew
+#  Edwards) own independent code found that for t^* = 75 and t^* = 94, that
+#  x(t^* + 2) was (incorrectly) allowed.
 testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, X(t^*  + 1)) as a nearest neighbor for E=2", {
     ts <- c(-0.056531409251883, 0.059223778257432, 5.24124928046977, -4.85399581474521,
             -0.46134818068973, 0.273317575696793, 0.801806230470337, -0.888891901824982,
@@ -37,7 +39,7 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
 
     # construct lagged block
     lag_block <- cbind(c(ts[2:length(ts)], NA), ts, c(NA, ts[1:(length(ts) - 1)]))
-    tstar <- 64
+    tstar <- 94
     t <- c(2:(tstar-1), (tstar+1):99)
 
     # lib and pred portions
