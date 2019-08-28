@@ -1,4 +1,4 @@
-context("Check calculations")
+context("Check nearest neighbors")
 
 # Use test_05_simplex_calculations.R as a template. ts is from a simple
 #  population model, and showed the problems. Using Deyle et al. (2013, PNAS,
@@ -37,11 +37,12 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
 
     # construct lagged block
     lag_block <- cbind(c(ts[2:length(ts)], NA), ts, c(NA, ts[1:(length(ts) - 1)]))
-    t <- c(2:63, 65:99)
+    tstar <- 64
+    t <- c(2:(tstar-1), (tstar+1):99)
 
     # lib and pred portions
     lib_block <- cbind(t + 1, lag_block[t, ])
-    pred_block <- cbind(65, lag_block[64, , drop = FALSE])
+    pred_block <- cbind(tstar+1, lag_block[tstar, , drop = FALSE])
 
     block <- rbind(lib_block, pred_block)
 
@@ -64,63 +65,4 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     est <- sum(weights * block[nn, 2]) / sum(weights) # weighted average
 
     testthat::expect_equal(model_est, est)
-})
-
-testthat::test_that("Simplex excludes ties in nearest neighbors correctly", {
-    ## smallish block (does full search over neighbors)
-    block <- data.frame(target = c(0, 1, 9, 9, -3, -3, -1),
-                        x =      c(0, 2, 5, 5, -5, -5, -2))
-    lib <- c(2, NROW(block))
-    pred <- c(1, 1)
-    out <- block_lnlp(block, lib = lib, pred = pred,
-                      tp = 0, columns = 2, target_column = 1,
-                      num_neighbors = 2, stats_only = FALSE)
-
-    expect_equal(out$model_output[[1]]$obs, out$model_output[[1]]$pred)
-
-    ## larger block (does incremental search for neighbors)
-    block <- data.frame(target = c(0, 1, rep(c(9, -3), each = 100), -1),
-                        x =      c(0, 2, rep(c(5, -5), each = 100), -2))
-    lib <- c(2, NROW(block))
-    pred <- c(1, 1)
-    out <- block_lnlp(block, lib = lib, pred = pred,
-                      tp = 0, columns = 2, target_column = 1,
-                      num_neighbors = 2, stats_only = FALSE)
-
-    expect_equal(out$model_output[[1]]$obs, out$model_output[[1]]$pred)
-})
-
-testthat::test_that("Simplex includes ties in nearest neighbors correctly", {
-    ## smallish block (does full search over neighbors)
-    block <- data.frame(target = c(0, 1, 9, 9, -3, -3, -1),
-                        x =      c(0, 2, 5, 5, -5, -5, -2))
-    lib <- c(2, NROW(block))
-    pred <- c(1, 1)
-    out <- block_lnlp(block, lib = lib, pred = pred,
-                      tp = 0, columns = 2, target_column = 1,
-                      num_neighbors = 3, stats_only = FALSE)
-    nn <- seq(from = 2, to = NROW(block))
-    neighbor_dist <- abs(block[nn, 2])
-    weights <- exp(-neighbor_dist / min(neighbor_dist))
-    weights[neighbor_dist > 2] <- weights[neighbor_dist > 2] /
-        length(weights[neighbor_dist > 2])
-    est <- sum(weights * block[nn, 1]) / sum(weights)
-    expect_equal(est, out$model_output[[1]]$pred)
-
-    ## larger block (does incremental search for neighbors)
-    block <- data.frame(target = c(0, 1, rep(c(9, -4), each = 100), -1),
-                        x =      c(0, 2, rep(c(5, -5), each = 100), -2))
-    lib <- c(2, NROW(block))
-    pred <- c(1, 1)
-    out <- block_lnlp(block, lib = lib, pred = pred,
-                      tp = 0, columns = 2, target_column = 1,
-                      num_neighbors = 4, stats_only = FALSE)
-
-    nn <- seq(from = 2, to = NROW(block))
-    neighbor_dist <- abs(block[nn, 2])
-    weights <- exp(-neighbor_dist / min(neighbor_dist))
-    weights[neighbor_dist > 2] <- 2 * weights[neighbor_dist > 2] /
-        length(weights[neighbor_dist > 2])
-    est <- sum(weights * block[nn, 1]) / sum(weights)
-    expect_equal(est, out$model_output[[1]]$pred)
 })
