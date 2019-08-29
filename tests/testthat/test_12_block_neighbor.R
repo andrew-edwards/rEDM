@@ -47,12 +47,14 @@ context("Check nearest neighbors")
 #      adapting Hao's manual code to explicitly ignore x(t^*+2) as a nearest neighbor
 # This agrees rEDM 2019 with ts[95] <- NA and with my manual code. Thus I think
 #  my ascertation that rEDM erroneously uses x(t^* + 2) is correct.
+# This test is set up to compare the rEDM results that from my adaptation of
+#  Hao's manual code, and so currently fails.
 
 # For t^* = 75 I get:
 #    Data: X(76) = -0.4154818     = ts[76]
 #    \hat{X}(76) = 0.8378772 from AME manual code
 #    \hat{X}(76) = 1.367744  from rEDM (in 2017)
-#    (haven't documented the rest yet)
+#    but I haven't documented the rest yet.
 
 testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, X(t^*  + 1)) as a nearest neighbor for E=2", {
     ts <- c(-0.056531409251883, 0.059223778257432, 5.24124928046977, -4.85399581474521,
@@ -140,5 +142,5 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     weights_adapt <- exp(-dist_vec_adapt[nn_adapt] / dist_vec_adapt[nn_adapt[1]])
     est_adapt <- sum(weights_adapt * block_adapt[nn_adapt, 2]) / sum(weights_adapt) # weighted average
 
-    testthat::expect_equal(model_est, est)
+    testthat::expect_equal(model_est, est_adapt)
 })
