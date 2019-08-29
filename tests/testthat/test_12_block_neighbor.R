@@ -1,37 +1,58 @@
 context("Check nearest neighbors")
 
-# Use test_05_simplex_calculations.R as a template. ts is from a simple
-#  population model, and showed the problems. Using Deyle et al. (2013, PNAS,
-#  110:6430-6435) Supporting Information notation. Time series has values X(t),
-#  and the lagged space consists of vectors (for E=2) x(t) = (X(t), X(t-1)).
+# Using test_05_simplex_calculations.R as a template. Andrew Edwards,
+#  29th August 2019.
+# This code can be run through line-by-line (omit the testthat:: line) to see
+#  the results.
+#  Example vector ts is from a simple population model, and reveals the problem.
+#  Using the notation from Deyle et al.'s (2013, PNAS, 110:6430-6435) Supporting
+#   Information.
+#  Time series has values X(t), and so for E=2 the lagged space consists of vectors
+#    x(t) = (X(t), X(t-1)). [x would be bold].
 #  For target time t^*, we are trying to predict the X(t^* + 1) value.
-#  By definition, X(t^* + 1) is included in x(t^* + 2) = (X(t^* + 2), X(t^* +
-#  1)), and so we should not be allowed to use x(t^* + 2). This test will test
-#  if x(t^* + 2) is correctly not allowed. For this time series, my (Andrew
-#  Edwards) own independent code found that for t^* = 75 and t^* = 94, that
-#  x(t^* + 2) was (incorrectly) allowed.
-#  Answers from my manual code in 2017 are:
-#   t^* = 75:
-#    Data: X(76) = -0.4154818     = ts[76]
-#    \hat{X}(76) = 0.8378772 from AME manual code
-#    \hat{X}(76) = 1.367744  from rEDM (in 2017)
-#   t^* = 94:
-#    Data: X(95) = -0.7987376
+#  By definition, X(t^* + 1) is included in
+#    x(t^* + 2) = ( X(t^* + 2), X(t^* + 1) )
+#   and so I expect that we should not be allowed to use x(t^* + 2) to predict
+#   X(t^* + 1).
+#  However, I demonstrate here that I think that the current rEDM::block_lnlp()
+#   function does allow this.
+#  For the time series below, my own independent code found, for t^* = 75 and
+#   t^* = 94, that x(t^* + 2) was (incorrectly) allowed.
+#  Here are the various answers from:
+#   my manual code,
+#   rEDM in 2017 (some time before Hao's rEDM commit 5a9af93eb4 on 4th Dec 2017,
+#     in which he created the original test that became test_05_simple_calculations.R),
+#   rEDM in 2019 (commit 88554a48 on 30th July 2019),
+#   Hao's manual code from test_05_simple_calculations.R,
+#   my adapation of that manual code.
+
+#   So, for t^* = 94:
+#    Data: X(95) = -0.7987376  = ts[95]
 #    \hat{X}(95) = 0.4123431 from AME manual code
 #    \hat{X}(95) = 0.1773531 from rEDM (in 2017)
 #    \hat{X}(95) = 0.1773531 from rEDM in 2019 (model_est) in this code with
-#                    ts[95] known, from commenting out ts[tstar+1] <- NA
+#                    ts[95] known
 #    \hat{X}(95) = 0.4123431 from rEDM in 2019 (model_est) in this code with
-#                    ts[95] <- NA, to ensure that it's not used at all
-#    \hat{X}(95) = 0.1773531 from Hao's manual calculations here (est) with ts[95] known
-#    \hat{X}(95) = 0.1800465 from Hao's manual calculations here with ts[95] not known
+#                    ts[tstar+1] <- NA, to ensure that ts[95] is not used at all
+#    \hat{X}(95) = 0.1773531 from Hao's manual calculation code here (est) with ts[95] known
+#    \hat{X}(95) = 0.1800465 from Hao's manual calculations here with
+#                    ts[tstar+1] <- NA
+
 # So it looks like either (i) my concern from 2017 still exists
-#                         (ii) my manual calculations are wrong (but that
+#                         (ii) my manual calculations are wrong, though that
 #                              wouldn't explain why rEDM in 2019 gives same
-#                              answer with ts[95] <- NA.
-# Adapt the manual calculations here to replicate mine.
+#                              answer as my code with ts[95] <- NA.
+# Adapting Hao's manual calculations here to replicate my own code, gives:
 #    \hat{X}(95) = 0.4123431 from adapt-manual-calculations section below -
 #      adapting Hao's manual code to explicitly ignore x(t^*+2) as a nearest neighbor
+# This agrees rEDM 2019 with ts[95] <- NA and with my manual code. Thus I think
+#  my ascertation that rEDM erroneously uses x(t^* + 2) is correct.
+
+# For t^* = 75 I get:
+#    Data: X(76) = -0.4154818     = ts[76]
+#    \hat{X}(76) = 0.8378772 from AME manual code
+#    \hat{X}(76) = 1.367744  from rEDM (in 2017)
+#    (haven't documented the rest yet)
 
 testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, X(t^*  + 1)) as a nearest neighbor for E=2", {
     ts <- c(-0.056531409251883, 0.059223778257432, 5.24124928046977, -4.85399581474521,
@@ -102,10 +123,10 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     # [5,] 98  2.1994237  0.1771146  0.4390243
     # [6,] 99 -2.9488857  2.1994237  0.1771146
     #  confirming that ts[95] = -0.7987376 appears in block due to the lagging,
-    #   but that is the value we are trying to predict. So need to create
-    #   block_adapt without those.
+    #   but it shouldn't be allowed as it is the value we are trying to predict.
+    #   So need to create block_adapt without it.
     block_adapt <- as.data.frame(block)
-    names(block_adapt) <- c("t", "Xt", "Xt.min.1", "Xt.min.2")
+    names(block_adapt) <- c("t", "Xt", "Xt.min.1", "Xt.min.2")   # for clarity
     rows_to_exclude <- which(block_adapt$t %in% c(tstar+2, tstar+3))  # since
                                         # they contain X(tstar+1); keep X(tstar+1) as final line
                                         # since predicting it (as Hao did)
@@ -114,7 +135,7 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     dist_mat_adapt <- as.matrix(dist(block_adapt[, 3:4]))
     dist_vec_adapt <- dist_mat_adapt[NROW(dist_mat_adapt), ]  # distances from X(tstar+1)
     dist_vec_adapt[length(dist_vec_adapt)] <- NA     # equals 0 by definition
-                                        # (distance from itself)
+                                                     #  (distance from itself)
     nn_adapt <- order(dist_vec_adapt)[1:3] # indices (not t) of 3 closest neighbors, since E=2
     weights_adapt <- exp(-dist_vec_adapt[nn_adapt] / dist_vec_adapt[nn_adapt[1]])
     est_adapt <- sum(weights_adapt * block_adapt[nn_adapt, 2]) / sum(weights_adapt) # weighted average
