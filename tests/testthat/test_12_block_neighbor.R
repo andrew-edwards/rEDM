@@ -19,15 +19,19 @@ context("Check nearest neighbors")
 #    Data: X(95) = -0.7987376
 #    \hat{X}(95) = 0.4123431 from AME manual code
 #    \hat{X}(95) = 0.1773531 from rEDM (in 2017)
-#    \hat{X}(95} = 0.1773531 from rEDM in 2019 (model_est) in this code with
+#    \hat{X}(95) = 0.1773531 from rEDM in 2019 (model_est) in this code with
 #                    ts[95] known, from commenting out ts[tstar+1] <- NA
-#    \hat{X}(95} = 0.4123431 from rEDM in 2019 (model_est) in this code with
+#    \hat{X}(95) = 0.4123431 from rEDM in 2019 (model_est) in this code with
 #                    ts[95] <- NA, to ensure that it's not used at all
-#    \hat{X}(95} = 0.1773531 from manual calculations here (est) with ts[95] known
-#    \hat{X}(95} = 0.1800465 from manual calculations here with ts[95] not known
+#    \hat{X}(95) = 0.1773531 from Hao's manual calculations here (est) with ts[95] known
+#    \hat{X}(95) = 0.1800465 from Hao's manual calculations here with ts[95] not known
 # So it looks like either (i) my concern from 2017 still exists
-#                         (ii) my manual calculations are wrong.
+#                         (ii) my manual calculations are wrong (but that
+#                              wouldn't explain why rEDM in 2019 gives same
+#                              answer with ts[95] <- NA.
 # Adapt the manual calculations here to replicate mine.
+#    \hat{X}(95) = 0.4123431 from adapt-manual-calculations section below -
+#      adapting Hao's manual code to explicitly ignore x(t^*+2) as a nearest neighbor
 
 testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, X(t^*  + 1)) as a nearest neighbor for E=2", {
     ts <- c(-0.056531409251883, 0.059223778257432, 5.24124928046977, -4.85399581474521,
@@ -87,6 +91,7 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     weights <- exp(-dist_vec[nn] / dist_vec[nn[1]])
     est <- sum(weights * block[nn, 2]) / sum(weights) # weighted average
 
+    # adapt-manual-calculations
     # adapt the above calculations to ignore x(t^*+2) as a nearest neighbour
     # block[(tstar-3):(tstar+2),]   # this gives (for t^*=94):
     #                            ts
@@ -101,16 +106,16 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     #   block_adapt without those.
     block_adapt <- as.data.frame(block)
     names(block_adapt) <- c("t", "Xt", "Xt.min.1", "Xt.min.2")
-    rows_to_exclude <- which(block_adapt$t %in% c(tstar+2, tstar+3))  # since contain
-                                        # X(tstar+1), but keep X(tstar+1) as final line
-                                        # since predicting it
+    rows_to_exclude <- which(block_adapt$t %in% c(tstar+2, tstar+3))  # since
+                                        # they contain X(tstar+1); keep X(tstar+1) as final line
+                                        # since predicting it (as Hao did)
     block_adapt <- block_adapt[-rows_to_exclude, ]
 
     dist_mat_adapt <- as.matrix(dist(block_adapt[, 3:4]))
     dist_vec_adapt <- dist_mat_adapt[NROW(dist_mat_adapt), ]  # distances from X(tstar+1)
     dist_vec_adapt[length(dist_vec_adapt)] <- NA     # equals 0 by definition
                                         # (distance from itself)
-    nn_adapt <- order(dist_vec_adapt)[1:3] # 3 closest neighbors, since E=2
+    nn_adapt <- order(dist_vec_adapt)[1:3] # indices (not t) of 3 closest neighbors, since E=2
     weights_adapt <- exp(-dist_vec_adapt[nn_adapt] / dist_vec_adapt[nn_adapt[1]])
     est_adapt <- sum(weights_adapt * block_adapt[nn_adapt, 2]) / sum(weights_adapt) # weighted average
 
