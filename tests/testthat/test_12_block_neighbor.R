@@ -10,6 +10,25 @@ context("Check nearest neighbors")
 #  if x(t^* + 2) is correctly not allowed. For this time series, my (Andrew
 #  Edwards) own independent code found that for t^* = 75 and t^* = 94, that
 #  x(t^* + 2) was (incorrectly) allowed.
+#  Answers from my manual code in 2017 are:
+#   t^* = 75:
+#    Data: X(76) = -0.4154818     = ts[76]
+#    \hat{X}(76) = 0.8378772 from AME manual code
+#    \hat{X}(76) = 1.367744  from rEDM (in 2017)
+#   t^* = 94:
+#    Data: X(95) = -0.7987376
+#    \hat{X}(95) = 0.4123431 from AME manual code
+#    \hat{X}(95) = 0.1773531 from rEDM (in 2017)
+#    \hat{X}(95} = 0.1773531 from rEDM in 2019 (model_est) in this code with
+#                    ts[95] known, from commenting out ts[tstar+1] <- NA
+#    \hat{X}(95} = 0.4123431 from rEDM in 2019 (model_est) in this code with
+#                    ts[95] <- NA, to ensure that it's not used at all
+#    \hat{X}(95} = 0.1773531 from manual calculations here (est) with ts[95] known
+#    \hat{X}(95} = 0.1800465 from manual calculations here with ts[95] not known
+# So it looks like either (i) my concern from 2017 still exists
+#                         (ii) my manual calculations are wrong.
+# Adapt the manual calculations here to replicate mine.
+
 testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, X(t^*  + 1)) as a nearest neighbor for E=2", {
     ts <- c(-0.056531409251883, 0.059223778257432, 5.24124928046977, -4.85399581474521,
             -0.46134818068973, 0.273317575696793, 0.801806230470337, -0.888891901824982,
@@ -37,9 +56,11 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
             -0.791665479471326, 0.482533897248175, -0.798737571552661, 0.439024256063545,
             0.177114631209318, 2.19942374686687, -2.9488856529422)
 
+    tstar <- 94
+    # ts[tstar+1] <- NA    # to ensure no use of the value we are trying to predict
     # construct lagged block
     lag_block <- cbind(c(ts[2:length(ts)], NA), ts, c(NA, ts[1:(length(ts) - 1)]))
-    tstar <- 94
+
     t <- c(2:(tstar-1), (tstar+1):99)
 
     # lib and pred portions
