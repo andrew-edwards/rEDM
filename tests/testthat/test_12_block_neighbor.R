@@ -88,12 +88,31 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
     est <- sum(weights * block[nn, 2]) / sum(weights) # weighted average
 
     # adapt the above calculations to ignore x(t^*+2) as a nearest neighbour
-    dist_mat_adapt <- as.matrix(dist(block[, 3:4]))
-    dist_vec_adapt <- dist_mat_adapt[NROW(dist_mat_adapt), ]
-    dist_vec_adapt[length(dist_vec_adapt)] <- NA
-    nn_adapt <- order(dist_vec_adapt)[1:3] # 3 closest neighbors
+    # block[(tstar-3):(tstar+2),]   # this gives (for t^*=94):
+    #                            ts
+    # [1,] 93 -0.7916655  1.1466821 -0.6579462
+    # [2,] 94  0.4825339 -0.7916655  1.1466821
+    # [3,] 96  0.4390243 -0.7987376  0.4825339
+    # [4,] 97  0.1771146  0.4390243 -0.7987376
+    # [5,] 98  2.1994237  0.1771146  0.4390243
+    # [6,] 99 -2.9488857  2.1994237  0.1771146
+    #  confirming that ts[95] = -0.7987376 appears in block due to the lagging,
+    #   but that is the value we are trying to predict. So need to create
+    #   block_adapt without those.
+    block_adapt <- as.data.frame(block)
+    names(block_adapt) <- c("t", "Xt", "Xt.min.1", "Xt.min.2")
+    rows_to_exclude <- which(block_adapt$t %in% c(tstar+2, tstar+3))  # since contain
+                                        # X(tstar+1), but keep X(tstar+1) as final line
+                                        # since predicting it
+    block_adapt <- block_adapt[-rows_to_exclude, ]
+
+    dist_mat_adapt <- as.matrix(dist(block_adapt[, 3:4]))
+    dist_vec_adapt <- dist_mat_adapt[NROW(dist_mat_adapt), ]  # distances from X(tstar+1)
+    dist_vec_adapt[length(dist_vec_adapt)] <- NA     # equals 0 by definition
+                                        # (distance from itself)
+    nn_adapt <- order(dist_vec_adapt)[1:3] # 3 closest neighbors, since E=2
     weights_adapt <- exp(-dist_vec_adapt[nn_adapt] / dist_vec_adapt[nn_adapt[1]])
-    est_adapt <- sum(weights_adapt * block[nn_adapt, 2]) / sum(weights_adapt) # weighted average
+    est_adapt <- sum(weights_adapt * block_adapt[nn_adapt, 2]) / sum(weights_adapt) # weighted average
 
     testthat::expect_equal(model_est, est)
 })
