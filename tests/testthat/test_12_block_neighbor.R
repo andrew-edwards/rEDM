@@ -79,13 +79,21 @@ testthat::test_that("Simplex (block_LNLP) does not use x(t^* + 2) = (X(t^* + 2, 
                       stats_only = FALSE, silent = TRUE)
     model_est <- out$model_output[[1]]$pred
 
-    # manually calculate distances and neighbors
+    # manually calculate distances and neighbors (Hao's code)
     dist_mat <- as.matrix(dist(block[, 3:4]))
     dist_vec <- dist_mat[NROW(dist_mat), ]
     dist_vec[length(dist_vec)] <- NA
     nn <- order(dist_vec)[1:3] # 3 closest neighbors
     weights <- exp(-dist_vec[nn] / dist_vec[nn[1]])
     est <- sum(weights * block[nn, 2]) / sum(weights) # weighted average
+
+    # adapt the above calculations to ignore x(t^*+2) as a nearest neighbour
+    dist_mat_adapt <- as.matrix(dist(block[, 3:4]))
+    dist_vec_adapt <- dist_mat_adapt[NROW(dist_mat_adapt), ]
+    dist_vec_adapt[length(dist_vec_adapt)] <- NA
+    nn_adapt <- order(dist_vec_adapt)[1:3] # 3 closest neighbors
+    weights_adapt <- exp(-dist_vec_adapt[nn_adapt] / dist_vec_adapt[nn_adapt[1]])
+    est_adapt <- sum(weights_adapt * block[nn_adapt, 2]) / sum(weights_adapt) # weighted average
 
     testthat::expect_equal(model_est, est)
 })
